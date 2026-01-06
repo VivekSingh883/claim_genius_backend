@@ -1,0 +1,256 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+    provider = "prisma-client-js"
+    output   = "../src/generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ==============================
+// MODELS WITH INDEXES
+// ==============================
+
+//Multiple roles to user managed by Assiging different Permission as per role  model
+model User {
+    //emp, assign, reviwer listing api
+    id           Int      @id @default(autoincrement())
+    name         String?
+    email        String   @unique
+    password     String?
+    employeeCode String?  @unique
+    roleId       Int
+    departmentId Int?
+    // assetId       Int?     
+    isActive     Boolean  @default(true)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    // Relations
+    role       Role        @relation(fields: [roleId], references: [id])
+    department Department? @relation(fields: [departmentId], references: [id])
+    tickets    Ticket[]    @relation("UserTickets")
+    comments   Comment[]
+    assignee   Assignee[] //required disscussion for array
+    reviewer   Reviewer[] //required disscussion for array
+
+    // indexes
+    @@index([roleId])
+    @@index([departmentId])
+}
+
+// 2 Role Model
+model Role {
+    id          Int              @id @default(autoincrement())
+    name        RoleType         @unique
+    users       User[]
+    permissions RolePermission[]
+
+    @@index([name])
+}
+
+// 3 Permission Model
+model Permission {
+    id    Int              @id @default(autoincrement())
+    name  String
+    roles RolePermission[]
+
+    @@index([name])
+}
+
+// 4 Department Model
+model Department {
+    id        Int      @id @default(autoincrement())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    // initials String? @unique
+
+    users             User[]
+    tickets           Ticket[]
+    issues            CommonIssue[]
+    assignee          Assignee[]
+    reviewers         Reviewer[]
+    DepartmentManager DepartmentManager[]
+    // @@index([initials])
+
+    @@index([name])
+}
+
+// Required disscussion
+model DepartmentManager {
+    id           Int     @id @default(autoincrement())
+    userId       Int
+    departmentId Int
+    isActive     Boolean @default(true)
+
+    // user       User       @relation(fields: [userId], references: [id])
+    department Department @relation(fields: [departmentId], references: [id])
+}
+
+// 5 RolePermission (Many-to-Many)
+model RolePermission {
+    id           Int @id @default(autoincrement())
+    roleId       Int
+    permissionId Int
+
+    role       Role       @relation(fields: [roleId], references: [id])
+    permission Permission @relation(fields: [permissionId], references: [id])
+
+    @@unique([roleId, permissionId])
+    @@index([roleId])
+    @@index([permissionId])
+}
+
+// 6 Ticket Model
+model Ticket {
+    id           Int            @id @default(autoincrement())
+    departmentId Int
+    userId       Int
+    assigneeId   Int?
+    assetType    String?
+    assetId      String?
+    issueType    String?
+    title        String
+    description  String
+    status       TicketStatus   @default(OPEN)
+    priority     TicketPriority @default(LOW)
+    attachments  String[]
+    createdAt    DateTime       @default(now())
+    ticketNumber String         @unique
+
+    department Department @relation(fields: [departmentId], references: [id])
+    user       User       @relation("UserTickets", fields: [userId], references: [id])
+    assignee   Assignee?  @relation(fields: [assigneeId], references: [id])
+    comments   Comment[]
+
+    @@index([departmentId])
+    @@index([userId])
+    @@index([status])
+    @@index([priority])
+}
+
+// 7 Issue Model
+model CommonIssue {
+    id           Int      @id @default(autoincrement())
+    departmentId Int
+    title        String
+    createdAt    DateTime @default(now())
+    description  String
+
+    department Department @relation(fields: [departmentId], references: [id])
+
+    @@index([departmentId])
+    @@index([title])
+}
+
+// 8 Assignee Model
+model Assignee {
+    id           Int     @id @default(autoincrement())
+    userId       Int
+    departmentId Int
+    isDefault    Boolean @default(false)
+
+    user       User       @relation(fields: [userId], references: [id])
+    department Department @relation(fields: [departmentId], references: [id])
+    Ticket     Ticket[]
+
+    @@index([userId])
+    @@index([departmentId])
+}
+
+// 9 Reviewer Model
+model Reviewer {
+    id           Int      @id @default(autoincrement())
+    userId       Int
+    departmentId Int
+    created_at   DateTime @default(now())
+
+    user       User       @relation(fields: [userId], references: [id])
+    department Department @relation(fields: [departmentId], references: [id])
+
+    @@index([userId])
+    @@index([departmentId])
+}
+
+// 10 Comment Model
+model Comment {
+    id        Int      @id @default(autoincrement())
+    comment   String
+    ticketId  Int
+    userId    Int
+    createdAt DateTime @default(now())
+    // feedback  String?
+    isEdited  Boolean  @default(false)
+
+    ticket Ticket @relation(fields: [ticketId], references: [id])
+    user   User   @relation(fields: [userId], references: [id])
+
+    @@index([ticketId])
+    @@index([userId])
+}
+
+model Settings {
+    id    Int    @id @default(autoincrement())
+    key   String @unique
+    value String
+    // Group Group[]
+}
+
+// ==============================
+// ENUMS
+// ==============================
+enum RoleType {
+    EMPLOYEE
+    ADMIN
+    ASSIGNEE
+    REVIEWER
+}
+
+// enum DepartmentType {
+//     HR
+//     IT
+//     ACCOUNTING
+//     DEVOPS
+// }
+
+// enum PermissionType {
+//     READ
+//     WRITE
+//     UPDATE
+//     DELETE
+// }
+
+// enum LabelType {
+//     BUG
+//     FEATURE
+//     TASK
+//     IMPROVEMENT
+// }
+
+// enum Group {
+//     ADMIN
+//     EMPLOYEE
+//     MANAGER
+// }
+
+enum TicketStatus {
+    OPEN
+    INPROGRESS
+    PENDING
+    CLOSED
+}
+
+enum TicketPriority {
+    LOW
+    MEDIUM
+    HIGH
+    CRITICAL
+}
