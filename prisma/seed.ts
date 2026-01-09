@@ -25,7 +25,6 @@ async function main() {
       { name: 'ticket:status-change' },
       { name: 'ticket:priority-change' },
       { name: 'ticket:reassign' },
-      { name: 'ticket:manage' },
       { name: 'chat:create' },
       { name: 'chat:view' },
       { name: 'assignee:view' },
@@ -91,8 +90,13 @@ async function main() {
   });
 
   // ADMIN PERMISSIONS (No Create Ticket)
-const adminPermissions = ['admin:view', 'ticket:manage'];
-
+const adminPermissions = [
+  'ticket:reassign',
+  'chat:view',
+  'assignee:view',
+  'admin:view',
+  'ticket:view',
+];
 
   adminPermissions.forEach(name => {
     const perm = permissions.find(p => p.name === name);
@@ -138,7 +142,7 @@ const adminPermissions = ['admin:view', 'ticket:manage'];
     },
     create: {
       name: 'John Doe',
-      email: 'asignee@gmail.com',
+      email: 'assignee@gmail.com',
       password: hashedPassword,
       roleId: assigneeRole.id,
       departmentId: itDept.id,
